@@ -8,6 +8,7 @@ from einops import rearrange
 from models.KAN import KANLinear
 
 
+# KAN-CAB
 class KANBlock(nn.Module):
     def __init__(self,input_dim,spline_order=3,grid_size=5):
         super(KANBlock, self).__init__()
@@ -15,18 +16,19 @@ class KANBlock(nn.Module):
         self.kan_layer_02 = KANLinear(input_dim,input_dim,spline_order=spline_order,grid_size=grid_size)
 
     def forward(self, x):
-        shorcut = x
+        shortcut = x
+        # Global average pooling
         score = F.adaptive_avg_pool2d(x,(1,1))
         score = score.squeeze(-1).squeeze(-1)
         score = self.kan_layer_01(score)
         score = self.kan_layer_02(score)
         score = rearrange(score, 'b c -> b c 1 1')
+        # Channel-wise multiplication
         x = x * score
-        return x + shorcut
+        return x + shortcut
 
     
-
-
+# KAN-Fusion
 class Fusion(nn.Module):
     def __init__(self,HSI_bands=31,MSI_bands=3,hidden_dim=256,scale=4,depth=4,image_size=64):
         super(Fusion, self).__init__()
@@ -55,9 +57,8 @@ class KANFormer(nn.Module):
         self.hidden_dim = hidden_dim
         self.scale = scale
         self.fusion = Fusion(HSI_bands=HSI_bands,MSI_bands=MSI_bands,hidden_dim=hidden_dim,scale=scale,depth=depth,image_size=image_size)
-        self.layers = nn.ModuleList([KANBlock(hidden_dim, hidden_dim) \
-                                     for i in range(depth)])
-        
+        self.layers = nn.ModuleList([KANBlock(hidden_dim, hidden_dim) for i in range(depth)])
+        # Restructure
         self.refine = nn.Sequential(
             nn.Conv2d(hidden_dim, hidden_dim, 3,1,1),
             nn.ReLU(inplace=True),

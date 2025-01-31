@@ -30,6 +30,7 @@ parse.add_argument('--depth', type=int,default=4)
 parse.add_argument('--comments', type=str,default='')
 parse.add_argument('--grid_size', type=int,default=5)
 parse.add_argument('--spline_order', type=int,default=3)
+parse.add_argument('--datapath', type=str,default='./datasets/')
 
 args = parse.parse_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -43,14 +44,14 @@ train_dataset_path = None
 if args.dataset == 'CAVE':
     HSI_bands = 31
     if args.scale == 2:
-        test_dataset_path = './datasets/CAVE_test_x2.npz'
-        train_dataset_path = './datasets/CAVE_train_x2.npz'
+        test_dataset_path = args.datapath+'CAVE_test_x2.npz'
+        train_dataset_path = args.datapath+'CAVE_train_x2.npz'
     if args.scale == 4:
-        test_dataset_path = './datasets/CAVE_test_x4.npz'
-        train_dataset_path = './datasets/CAVE_train_x4.npz'
+        test_dataset_path = args.datapath+'CAVE_test_x4.npz'
+        train_dataset_path = args.datapath+'CAVE_train_x4.npz'
     if args.scale == 8:
-        test_dataset_path = './datasets/CAVE_test_x8.npz'
-        train_dataset_path = './datasets/CAVE_train_x8.npz'
+        test_dataset_path = args.datapath+'CAVE_test_x8.npz'
+        train_dataset_path = args.datapath+'CAVE_train_x8.npz'
 
 if args.model == "KANFormer":
     model = KANFormer(scale=args.scale,depth=args.depth)
@@ -77,7 +78,7 @@ if args.check_point is not None:
     
     print(f'check_point: {args.check_point}')
     
-if args.check_point is  None:
+if args.check_point is None:
     init_weights(model)
     log_dir = f'./trained_models/{model_name}_x{args.scale}_{args.comments},{args.dataset},{beijing_time()}'
     if not os.path.exists(log_dir) and args.log_out == 1:
