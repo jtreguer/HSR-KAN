@@ -24,6 +24,8 @@ class KANLinear(torch.nn.Module):
         self.grid_size = grid_size
         self.spline_order = spline_order
         h = (grid_range[1] - grid_range[0]) / grid_size
+        ### DEBUG
+        #print('Grid size, spline_order, h ', grid_size, spline_order, h)
         grid = (
             (
                 torch.arange(-spline_order, grid_size + spline_order + 1) * h
@@ -34,6 +36,8 @@ class KANLinear(torch.nn.Module):
         )
         self.register_buffer("grid", grid)
         self.base_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))
+        ### DEBUG
+        #print('Grid size + spline_order ', grid_size + spline_order)
         self.spline_weight = torch.nn.Parameter(
             torch.Tensor(out_features, in_features, grid_size + spline_order)
         )
