@@ -44,14 +44,21 @@ class Fusion(nn.Module):
 
     def forward(self, LRHSI, HRMSI):
         # upscale LR HS
+        print(LRHSI.shape)
         up_LRHSI = F.interpolate(LRHSI, scale_factor=self.scale, mode='bicubic', align_corners=True)
-        # reshape tensor from 16x16x31 to 256x31
+        print(up_LRHSI.shape)
+        # reshape tensor from 31x16x16 to 256x31
         lrhsi_feats = rearrange(up_LRHSI, 'b c h w -> b (h w) c')
         # reshape tensor from 64x64x3 to 4096x3
         hrmsi_feats = rearrange(HRMSI, 'b c h w -> b (h w) c')
+        print(lrhsi_feats.shape, hrmsi_feats.shape)
+        print("lrhsi to first KAN")
         lrhsi_feats = self.hsi_kan(lrhsi_feats)
+        print("hrmsi to second KAN")
         hrmsi_feats = self.msi_kan(hrmsi_feats)
+        print(lrhsi_feats.shape, hrmsi_feats.shape)
         feats = torch.cat([lrhsi_feats, hrmsi_feats], dim=-1)  
+        print("concatenated LR/HR to 3rd KAN")
         feats = self.align_kan(feats)  
         feats = rearrange(feats, 'b (h w) c -> b c h w', h=self.image_size)
         return feats
