@@ -17,4 +17,30 @@ class NPZDataset(torch.utils.data.Dataset):
     
     def __len__(self):
         return len(self.GT_list)
+    
+class ChikuseiDataset(torch.utils.data.Dataset):
+
+    def __init__(self,full_image: np.array, training_zone: list, scale: int=4):
+        super().__init__()
+        self.full_image = full_image
+        self.LRHSI = self.make_lr_hs()
+        self.HRMSI = self.make_hr_ms()
+
+    def __getitem__(self, index):
+        return torch.from_numpy(self.GT_list[index]).float(), \
+                torch.from_numpy(self.LRHSI_list[index]).float(),\
+                 torch.from_numpy(self.RGB_list[index]).float()
+    
+    def __len__(self):
+        return len(self.GT_list)
+
+    def make_lr_hs(self):
+        # Gaussian blur, 3x3 kernel, then scale reduction
+        pass
+
+    def make_hr_ms(self):
+        pass
+
+
+    
 
