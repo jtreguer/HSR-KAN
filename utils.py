@@ -157,17 +157,17 @@ def set_logger(model_name, logger_dir, log_out):
     logger.addHandler(consoleHandler)
     return logger
 
-def test_speed(model,device,band_nums=31,scale=4):
+def test_speed(model,device,band_nums=31,scale=4,channels=4):
     model.eval()
     if scale == 2:
         HSI = torch.randn((1,band_nums,32,32)).to(device)
-        RGB = torch.randn((1,3,64,64)).to(device)
+        RGB = torch.randn((1,channels,64,64)).to(device)
     if scale == 4:
         HSI = torch.randn((1,band_nums,16,16)).to(device)
-        RGB = torch.randn((1,3,64,64)).to(device)
+        RGB = torch.randn((1,channels,64,64)).to(device)
     if scale == 8:
         HSI = torch.randn((1,band_nums,16,16)).to(device)
-        RGB = torch.randn((1,3,128,128)).to(device)
+        RGB = torch.randn((1,channels,128,128)).to(device)
     # flops, params = profile(model, inputs=(HSI,RGB,))
     # flops, params = clever_format([flops, params], "%.6f")
     from fvcore.nn import FlopCountAnalysis, parameter_count,parameter_count_table

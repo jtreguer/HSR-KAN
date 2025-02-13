@@ -1,0 +1,1 @@
+[model:KANFormer_x4,dataset:chikusei],model_size:7.77664M,inference_time:0.009565S,FLOPs:9.710338048G

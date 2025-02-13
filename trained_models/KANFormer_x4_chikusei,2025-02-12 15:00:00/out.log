@@ -1,0 +1,3 @@
+[model:KANFormer_x4,dataset:chikusei],model_size:7.77664M,inference_time:0.011502S,FLOPs:9.710338048G
+[model:KANFormer_x4,dataset:chikusei],model_size:7.77664M,inference_time:0.009362S,FLOPs:9.710338048G
+[model:KANFormer_x4,dataset:chikusei],model_size:7.77664M,inference_time:0.009362S,FLOPs:9.710338048G

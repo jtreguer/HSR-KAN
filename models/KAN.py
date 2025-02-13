@@ -18,7 +18,7 @@ class KANLinear(torch.nn.Module):
         grid_eps=0.02,
         grid_range=[-1, 1],
     ):
-        super(KANLinear, self).__init__()
+        super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.grid_size = grid_size
@@ -151,13 +151,13 @@ class KANLinear(torch.nn.Module):
         )
 
     def forward(self, x: torch.Tensor):
-        print("X.size", x.size(-1))
-        print(self.in_features)
+        # print("X.size", x.size(-1))
+        # print(self.in_features)
         assert x.size(-1) == self.in_features
         original_shape = x.shape
         x = x.reshape(-1, self.in_features)
-        print("X.shape", x.shape)
-        print("Base weight", self.base_weight.dtype)
+        #print("X.shape", x.shape)
+        #print("Base weight", self.base_weight.dtype)
         base_output = F.linear(self.base_activation(x), self.base_weight)
         spline_output = F.linear(self.b_splines(x).view(x.size(0), -1),self.scaled_spline_weight.view(self.out_features, -1))
         output = base_output + spline_output

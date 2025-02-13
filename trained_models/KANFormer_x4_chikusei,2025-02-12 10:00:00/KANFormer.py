@@ -36,7 +36,6 @@ class Fusion(nn.Module):
         super(Fusion, self).__init__()
         ### DEBUG
         #print("KANFUSION Initialized")
-        print(MSI_bands)
         self.hsi_kan = KANLinear(HSI_bands,hidden_dim)
         self.msi_kan = KANLinear(MSI_bands,hidden_dim)
         self.align_kan = KANLinear(hidden_dim*2,hidden_dim)
@@ -44,7 +43,6 @@ class Fusion(nn.Module):
         self.image_size = image_size
 
     def forward(self, LRHSI, HRMSI):
-        print("Forward pass")
         # upscale LR HS
         up_LRHSI = F.interpolate(LRHSI, scale_factor=self.scale, mode='bicubic', align_corners=True)
         # reshape tensor from 31x16x16 to 256x31
@@ -64,7 +62,6 @@ class KANFormer(nn.Module):
         # super(KANFormer, self).__init__()
         self.HSI_bands = HSI_bands
         self.MSI_bands = MSI_bands
-        print(self.MSI_bands)
         self.hidden_dim = hidden_dim
         self.scale = scale
         self.fusion = Fusion(HSI_bands=HSI_bands,MSI_bands=MSI_bands,hidden_dim=hidden_dim,scale=scale,depth=depth,image_size=image_size)
