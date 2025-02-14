@@ -42,6 +42,10 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         self.HRMSI_list = self.make_hr_ms()
 
     def __getitem__(self, index):
+        # Normalize GT
+        for gt in self.GT_list:
+            for k in range(len(self.wave_vector)):
+                gt[:,:,k] = cv2.normalize(gt[:,:,k],None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
 
         return torch.from_numpy(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size))).float(), \
                 torch.from_numpy(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres))).float(),\
@@ -55,16 +59,16 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         lr_hs_chikusei = []
         for i in range(len(self.GT_list)):
             blurred_hs = GaussianBlur(self.GT_list[i],(3,3),sigmaX=self.sigma, borderType=0)
-            # Downsampling       
-            lr_hs_chikusei.append(cv2.resize(blurred_hs,(self.subres,self.subres),interpolation=cv2.INTER_NEAREST))
+            if 1 :
+                blurred_hs_normalized = np.empty(blurred_hs.shape, dtype=blurred_hs.dtype)
+                for j in range(len(self.wave_vector)):
+                    blurred_hs_normalized[:,:,j] = cv2.normalize(blurred_hs[:,:,j],None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+            if 0:
+                 blurred_hs_normalized = cv2.normalize(blurred_hs[:,:,j],None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+            # Downsampling    
+            lr_hs_chikusei.append(cv2.resize(blurred_hs_normalized,(self.subres,self.subres),interpolation=cv2.INTER_NEAREST))
         return lr_hs_chikusei
         
-    def normalize(self, image):
-        curr_min = np.min(image)
-        curr_max = np.max(image)
-        r = curr_max - curr_min
-        return (image-curr_min)/r
-
     def make_hr_ms(self):
         ms_list = []
         for j in range(len(self.GT_list)):
@@ -73,7 +77,7 @@ class ChikuseiDataset(torch.utils.data.Dataset):
                 filter = self.gaussian_response(self.wave_vector,wl,self.sigma_filter)
                 filter /= np.max(filter)
                 ms[:,:,i] = np.max(self.GT_list[j]*filter.reshape(1,1,len(filter)),axis=2)
-                ms[:,:,i] = self.normalize(ms[:,:,i])
+                ms[:,:,i] = cv2.normalize(ms[:,:,i],None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
             ms_list.append(ms)
         return ms_list
 
@@ -87,7 +91,8 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         # print(i_range, j_range)
         for i in range(i_range):
             for j in range(j_range):
-                GT_list.append(self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:])                
+                target_zone = self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:]
+                GT_list.append(target_zone)           
         return GT_list
     
     def gaussian_response(self, x, mean, sigma):

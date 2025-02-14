@@ -44,7 +44,6 @@ class Fusion(nn.Module):
         self.image_size = image_size
 
     def forward(self, LRHSI, HRMSI):
-        print("Forward pass")
         # upscale LR HS
         up_LRHSI = F.interpolate(LRHSI, scale_factor=self.scale, mode='bicubic', align_corners=True)
         # reshape tensor from 31x16x16 to 256x31
@@ -59,6 +58,9 @@ class Fusion(nn.Module):
         return feats
     
 class KANFormer(nn.Module):
+
+    name = "KANFormer"
+
     def __init__(self,HSI_bands=31,MSI_bands=3,hidden_dim=256,scale=4,depth=4,image_size=64):
         super().__init__()
         # super(KANFormer, self).__init__()

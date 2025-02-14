@@ -181,4 +181,17 @@ def test_speed(model,device,band_nums=31,scale=4,channels=4):
     inference_time = end_time - start_time
     return inference_time,flops,params
 
+def save_checkpoint(state, filename="checkpoint.pth"):
+    print(f"=> Saving checkpoint @ {filename}")
+    torch.save(state, filename)
+
+def load_checkpoint(checkpoint: str, model, optimizer, scheduler):
+    print("=> Loading checkpoint")
+    cp = torch.load(checkpoint)
+    model.load_state_dict(cp['state_dict'])
+    # model.load_state_dict(cp['net'],strict=False)  
+    optimizer.load_state_dict(cp['optimizer']) 
+    scheduler.load_state_dict(cp['scheduler'])
+    start_epoch = cp['epoch']+1  
+
 
