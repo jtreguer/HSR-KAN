@@ -26,8 +26,9 @@ class ChikuseiDataset(torch.utils.data.Dataset):
     target_wavelengths = [0.49,0.56,0.665,0.89]
     sigma_filter = 0.05
 
-    def __init__(self,full_image: np.array, training_zone: list,  wave_vector: np.array, scale: int=4,gt_size: int=64):
+    def __init__(self,full_image: np.array, training_zone: list,  wave_vector: np.array, device: torch.device, scale: int=4,gt_size: int=64):
         super().__init__()
+        self.device = device
         self.full_image = full_image
         self.scale = scale
         self.gt_size = gt_size
@@ -40,19 +41,33 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         self.GT_list = self.make_gt()
         self.LRHSI_list = self.make_lr_hs()
         self.HRMSI_list = self.make_hr_ms()
-
-    def __getitem__(self, index):
         # Normalize GT
         for gt in self.GT_list:
             for k in range(len(self.wave_vector)):
                 gt[:,:,k] = cv2.normalize(gt[:,:,k],None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+        # Make tensor lists
+        self.GT_tensor_list = self.make_cuda_tensor(self.GT_list)
+        self.LRHSI_tensor_list = self.make_cuda_tensor(self.LRHSI_list)
+        self.HRMSI_tensor_list = self.make_cuda_tensor(self.HRMSI_list)
 
-        return torch.from_numpy(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size))).float(), \
-                torch.from_numpy(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres))).float(),\
-                torch.from_numpy(self.HRMSI_list[index].reshape((len(self.target_wavelengths),self.gt_size,self.gt_size))).float()
+    def __getitem__(self, index):
+        return self.GT_tensor_list[index], self.LRHSI_tensor_list[index], self.HRMSI_tensor_list[index]
+        # return torch.as_tensor(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size)), dtype = torch.float32, device=self.device), \
+        #         torch.as_tensor(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres)), dtype = torch.float32, device=self.device),\
+        #         torch.as_tensor(self.HRMSI_list[index].reshape((len(self.target_wavelengths),self.gt_size,self.gt_size)), dtype = torch.float32, device=self.device)
+
+        # return torch.from_numpy(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size)) ).float(), \
+        #         torch.from_numpy(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres))).float(),\
+        #         torch.from_numpy(self.HRMSI_list[index].reshape((len(self.target_wavelengths),self.gt_size,self.gt_size))).float()
     
     def __len__(self):
         return len(self.GT_list)
+    
+    def make_cuda_tensor(self, arr_list):
+        tensor_list = []
+        for arr in arr_list:
+            tensor_list.append(torch.as_tensor(arr.reshape((arr.shape[2],arr.shape[0],arr.shape[1])), dtype = torch.float32, device=self.device))
+        return tensor_list
 
     def make_lr_hs(self):
         # Gaussian blur, 3x3 kernel, then scale reduction
@@ -92,7 +107,8 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         for i in range(i_range):
             for j in range(j_range):
                 target_zone = self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:]
-                GT_list.append(target_zone)           
+                GT_list.append(target_zone)
+                # torch.as_tensor(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres)), dtype = torch.float32, device=self.device)           
         return GT_list
     
     def gaussian_response(self, x, mean, sigma):

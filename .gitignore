@@ -1,2 +1,4 @@
 venv/
-/trained_models
+trained_models/*
+.data/
+mnist.py
