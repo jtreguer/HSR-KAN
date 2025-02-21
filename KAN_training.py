@@ -9,6 +9,8 @@ import torch
 from torchsummary import summary
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
+# EXPERIMENTAL
+from torch.amp import GradScaler, autocast
 
 from utils import Metric,get_model_size,test_speed, set_logger,init_weights,set_seed, save_checkpoint, load_checkpoint
 from models.KANFormer import KANFormer
@@ -54,7 +56,7 @@ chikusei_KAN = chikusei_KAN.to(device)
 
 # Training params
 epochs = 1000
-batch_size = 8
+batch_size = 12
 lr = 4e-4
 loss_func = torch.nn.L1Loss()
 optimizer = torch.optim.Adam(lr=lr,params=chikusei_KAN.parameters())
@@ -98,6 +100,9 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
         print("Epoch: ", epoch)
         epoch_loss = 0
 
+        # EXPERIMENTAL
+        scaler = GradScaler('cuda')
+
         # Batch loop
         with tqdm(train_dataloader) as pbar:
             for idx,loader_data in enumerate(pbar):
@@ -106,7 +111,10 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
                 torch.cuda.synchronize()
                 print("Data loading time:", time.time()-t)
                 t = time.time()
-                preHSI = chikusei_KAN(LRHSI,HRMSI)
+
+                with autocast('cuda'):  # Use mixed precision EXPERIMENTAL
+                    preHSI = chikusei_KAN(LRHSI,HRMSI)
+
                 torch.cuda.synchronize()
                 print("Forward pass time:", time.time()-t)
                 t = time.time()
@@ -114,16 +122,27 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
                 torch.cuda.synchronize()
                 print("Reg loss computation time:", time.time()-t)
                 t = time.time()
-                loss = loss_func(GT,preHSI) + reg_loss
+
+                with autocast('cuda'): #EXPERIMENTAL
+                    loss = loss_func(GT,preHSI) + reg_loss
+
                 torch.cuda.synchronize()
                 print("Total loss computation time:", time.time()-t)
                 optimizer.zero_grad()
                 t = time.time()
-                loss.backward()
+
+                # loss.backward()
+                scaler.scale(loss).backward()
+
                 torch.cuda.synchronize()
                 print("Backprop computation time:", time.time()-t)
-                t = time.time() 
-                optimizer.step()
+                t = time.time()
+
+                # optimizer.step()
+
+                scaler.step(optimizer)
+                scaler.update()
+
                 torch.cuda.synchronize()
                 print("Optimizer step time:", time.time()-t)
                 hist_batch_loss.append(loss.item())
@@ -150,6 +169,7 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
     return hist_batch_loss, hist_epoch_loss
 
 ###############################################################
-
-b_loss, e_loss = train(1,chikusei_KAN)
-print(b_loss)
+t = time.time()
+b_loss, e_loss = train(1,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4-trained.pth')
+print("Training time:", time.time()-t)
+print(b_loss, len(b_loss))
