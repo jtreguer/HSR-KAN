@@ -56,7 +56,7 @@ chikusei_KAN = chikusei_KAN.to(device)
 
 # Training params
 epochs = 1000
-batch_size = 12
+batch_size = 1
 lr = 4e-4
 loss_func = torch.nn.L1Loss()
 optimizer = torch.optim.Adam(lr=lr,params=chikusei_KAN.parameters())
@@ -170,6 +170,7 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
 
 ###############################################################
 t = time.time()
-b_loss, e_loss = train(1,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4-trained.pth')
+torch.cuda.synchronize()
+b_loss, e_loss = train(100,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4-trained.pth')
 print("Training time:", time.time()-t)
-print(b_loss, len(b_loss))
+print(e_loss, len(e_loss))
