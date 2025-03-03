@@ -2,3 +2,4 @@ venv/
 trained_models/*
 .data/
 mnist.py
+*.pyc

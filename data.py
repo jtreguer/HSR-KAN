@@ -29,7 +29,7 @@ class ChikuseiDataset(torch.utils.data.Dataset):
     def __init__(self,full_image: np.array, training_zone: list,  wave_vector: np.array, device: torch.device, scale: int=4,gt_size: int=64):
         super().__init__()
         self.device = device
-        self.full_image = full_image
+        self.full_image = full_image.astype(np.float32)
         self.scale = scale
         self.gt_size = gt_size
         self.training_zone = training_zone #defined by (x0,y0,x1,y1)
@@ -44,7 +44,9 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         # Normalize GT
         for gt in self.GT_list:
             for k in range(len(self.wave_vector)):
+                # print("gt unique",np.unique(gt[:,:,k]))
                 gt[:,:,k] = cv2.normalize(gt[:,:,k],None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+                # print("NORMALIZED gt unique",np.unique(gt[:,:,k]))
         # Make tensor lists
         self.GT_tensor_list = self.make_cuda_tensor(self.GT_list)
         self.LRHSI_tensor_list = self.make_cuda_tensor(self.LRHSI_list)
@@ -99,14 +101,22 @@ class ChikuseiDataset(torch.utils.data.Dataset):
     def make_gt(self):
         i_range = self.height // self.gt_size
         j_range = self.width // self.gt_size
+        print(i_range, j_range)
         GT_list = []
         x0 = self.training_zone[0]
         y0 = self.training_zone[1]
+        print("full image unique", np.unique(self.full_image[:,:,0]))
+        print(self.full_image.shape)
         # print(self.full_image.shape)
         # print(i_range, j_range)
         for i in range(i_range):
             for j in range(j_range):
+                print(self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:].shape)
                 target_zone = self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:]
+                print(target_zone.dtype, np.max(target_zone), np.min(target_zone))
+                for k in range(128):
+                    if len(np.unique(target_zone[:,:,k])) > 2:
+                        print("target zone uniques", np.unique(target_zone[:,:,0]))
                 GT_list.append(target_zone)
                 # torch.as_tensor(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres)), dtype = torch.float32, device=self.device)           
         return GT_list

@@ -72,6 +72,9 @@ scale = 4
 # Single file save
 def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
 
+    torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.enabled=False
+
     if checkpoint is None:
         print("No checkpoint - starting training from scratch")
         init_weights(model)
@@ -123,12 +126,12 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
                 print("Reg loss computation time:", time.time()-t)
                 t = time.time()
 
-                with autocast('cuda'): #EXPERIMENTAL
+                with autocast('cuda'): # Use mixed precision EXPERIMENTAL
                     loss = loss_func(GT,preHSI) + reg_loss
 
                 torch.cuda.synchronize()
                 print("Total loss computation time:", time.time()-t)
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True) # None for faster allocation
                 t = time.time()
 
                 # loss.backward()
