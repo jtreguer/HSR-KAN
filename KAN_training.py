@@ -60,10 +60,10 @@ batch_size = 1
 lr = 4e-4
 loss_func = torch.nn.L1Loss()
 optimizer = torch.optim.Adam(lr=lr,params=chikusei_KAN.parameters())
-scheduler = StepLR(optimizer=optimizer,step_size=100,gamma=0.1)
+scheduler = StepLR(optimizer=optimizer,step_size=100,gamma=0.2) # Gamma set to 0.1 originally
 
 full_image = rearrange(hyperspectral_data,'c h w -> h w c')
-chikusei_data = ChikuseiDataset(full_image=full_image,training_zone=[128,128,1024,1024],wave_vector=w_vector,device=device,scale=4,gt_size=64)
+chikusei_data = ChikuseiDataset(full_image=full_image,training_zone=[128,128,1024,2048],wave_vector=w_vector,device=device,scale=4,gt_size=64)
 train_dataloader = DataLoader(chikusei_data,batch_size=batch_size,drop_last=True,shuffle=True)
 
 model_name = 'KANFormer'
@@ -109,47 +109,49 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
         # Batch loop
         with tqdm(train_dataloader) as pbar:
             for idx,loader_data in enumerate(pbar):
-                t = time.time()
+                init_batch_loop = time.time()
+                # t=  = time.time()
                 GT,LRHSI,HRMSI = loader_data[0],loader_data[1],loader_data[2]
-                torch.cuda.synchronize()
-                print("Data loading time:", time.time()-t)
-                t = time.time()
+                # torch.cuda.synchronize()
+                # print("Data loading time:", time.time()-t)
+                # t = time.time()
 
                 with autocast('cuda'):  # Use mixed precision EXPERIMENTAL
                     preHSI = chikusei_KAN(LRHSI,HRMSI)
 
-                torch.cuda.synchronize()
-                print("Forward pass time:", time.time()-t)
-                t = time.time()
+                # torch.cuda.synchronize()
+                # print("Forward pass time:", time.time()-t)
+                # t = time.time()
                 reg_loss =  chikusei_KAN.regularization_loss(regularize_activation=0.01, regularize_entropy=0.01)
-                torch.cuda.synchronize()
-                print("Reg loss computation time:", time.time()-t)
-                t = time.time()
+                # torch.cuda.synchronize()
+                # print("Reg loss computation time:", time.time()-t)
+                # t = time.time()
 
                 with autocast('cuda'): # Use mixed precision EXPERIMENTAL
                     loss = loss_func(GT,preHSI) + reg_loss
 
-                torch.cuda.synchronize()
-                print("Total loss computation time:", time.time()-t)
+                # torch.cuda.synchronize()
+                # print("Total loss computation time:", time.time()-t)
                 optimizer.zero_grad(set_to_none=True) # None for faster allocation
-                t = time.time()
+                # t = time.time()
 
                 # loss.backward()
                 scaler.scale(loss).backward()
 
                 torch.cuda.synchronize()
-                print("Backprop computation time:", time.time()-t)
-                t = time.time()
+                # print("Backprop computation time:", time.time()-t)
+                # t = time.time()
 
                 # optimizer.step()
 
                 scaler.step(optimizer)
                 scaler.update()
 
-                torch.cuda.synchronize()
-                print("Optimizer step time:", time.time()-t)
+                # torch.cuda.synchronize()
+                # print("Optimizer step time:", time.time()-t)
+                print(f"batch loop done in {time.time() - init_batch_loop}")
                 hist_batch_loss.append(loss.item())
-                pbar.set_postfix(loss=loss.item(), reg_loss=reg_loss, lr=optimizer.param_groups[0]['lr'])
+                pbar.set_postfix(epoch =epoch,loss=loss.item(), reg_loss=reg_loss, lr=optimizer.param_groups[0]['lr'])
 
         epoch_loss = np.mean(hist_batch_loss)
         print('Epoch loss:', epoch_loss)
@@ -174,6 +176,7 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
 ###############################################################
 t = time.time()
 torch.cuda.synchronize()
-b_loss, e_loss = train(100,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4-trained.pth')
+b_loss, e_loss = train(100,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4-trained2.pth')
+# b_loss, e_loss = train(100,chikusei_KAN,checkpoint=None)
 print("Training time:", time.time()-t)
 print(e_loss, len(e_loss))
