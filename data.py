@@ -55,14 +55,11 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         print("Using from_numpy")
         example = torch.from_numpy(self.GT_list[0]).float().to(self.device)
         plt.matshow(example.cpu().detach().numpy()[:,:,3])
+        print(f"dtype preserved {example.cpu().detach().numpy()[3,:,:].dtype}")
 
 
     def __getitem__(self, index):
-        print("Using from_numpy")
-        example = torch.from_numpy(self.GT_list[index]).float().to(self.device)
-        plt.plot(example.cpu().detach().numpy()[3,:,:])
-        
-        return torch.from_numpy(self.GT_list[index]).float().to(self.device), \
+        return torch.from_numpy(self.GT_list[index].reshape).float().to(self.device), \
                 torch.from_numpy(self.LRHSI_list[index]).float().to(self.device),\
                 torch.from_numpy(self.HRMSI_list[index]).float().to(self.device)
 
@@ -80,6 +77,9 @@ class ChikuseiDataset(torch.utils.data.Dataset):
     
     def __len__(self):
         return len(self.GT_list)
+    
+    def reshape_array_list(self, arr_list):
+            pass
     
     def make_cuda_tensor(self, arr_list):
         tensor_list = []
