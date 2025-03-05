@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import cv2
 from cv2 import GaussianBlur
+from einops import rearrange
 import matplotlib.pyplot as plt #DEBUG
 
 
@@ -30,7 +31,7 @@ class ChikuseiDataset(torch.utils.data.Dataset):
     def __init__(self,full_image: np.array, training_zone: list,  wave_vector: np.array, device: torch.device, scale: int=4,gt_size: int=64):
         super().__init__()
         self.device = device
-        self.full_image = full_image.astype(np.float32) # CONVERSION
+        self.full_image = full_image.astype(np.float32) # TYPE CONVERSION
         self.scale = scale
         self.gt_size = gt_size
         self.training_zone = training_zone #defined by (x0,y0,x1,y1)
@@ -39,6 +40,7 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         self.wave_vector = wave_vector  
         self.channels = full_image.shape[-1]
         self.subres = int(gt_size/scale)
+        # In h w c order
         self.GT_list = self.make_gt()
         self.LRHSI_list = self.make_lr_hs()
         self.HRMSI_list = self.make_hr_ms()
@@ -46,45 +48,27 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         for gt in self.GT_list:
             for k in range(len(self.wave_vector)):
                 gt[:,:,k] = cv2.normalize(gt[:,:,k],None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
-        # Make tensor lists  
+        # Make tensor lists
+        # In c h w order for the model to digest  
         self.GT_tensor_list = self.make_cuda_tensor(self.GT_list)
         self.LRHSI_tensor_list = self.make_cuda_tensor(self.LRHSI_list)
         self.HRMSI_tensor_list = self.make_cuda_tensor(self.HRMSI_list)
-        print("Plot tensor")
-        plt.matshow(self.GT_tensor_list[0].cpu().detach().numpy()[3,:,:])
-        print("Using from_numpy")
-        example = torch.from_numpy(self.GT_list[0]).float().to(self.device)
-        plt.matshow(example.cpu().detach().numpy()[:,:,3])
-        print(f"dtype preserved {example.cpu().detach().numpy()[3,:,:].dtype}")
 
 
     def __getitem__(self, index):
-        return torch.from_numpy(self.GT_list[index].reshape).float().to(self.device), \
-                torch.from_numpy(self.LRHSI_list[index]).float().to(self.device),\
-                torch.from_numpy(self.HRMSI_list[index]).float().to(self.device)
+          return self.GT_tensor_list[index], self.LRHSI_tensor_list[index], self.HRMSI_tensor_list[index]
 
-
-        # return self.GT_tensor_list[index], self.LRHSI_tensor_list[index], self.HRMSI_tensor_list[index]
-        
-        
-        # return torch.as_tensor(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size)), dtype = torch.float32, device=self.device), \
-        #         torch.as_tensor(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres)), dtype = torch.float32, device=self.device),\
-        #         torch.as_tensor(self.HRMSI_list[index].reshape((len(self.target_wavelengths),self.gt_size,self.gt_size)), dtype = torch.float32, device=self.device)
-
-        # return torch.from_numpy(self.GT_list[index].reshape((self.channels,self.gt_size,self.gt_size)) ).float(), \
-        #         torch.from_numpy(self.LRHSI_list[index].reshape((self.channels,self.subres,self.subres))).float(),\
-        #         torch.from_numpy(self.HRMSI_list[index].reshape((len(self.target_wavelengths),self.gt_size,self.gt_size))).float()
     
     def __len__(self):
         return len(self.GT_list)
     
-    def reshape_array_list(self, arr_list):
-            pass
-    
+  
     def make_cuda_tensor(self, arr_list):
         tensor_list = []
         for arr in arr_list:
-            tensor_list.append(torch.as_tensor(arr.reshape((arr.shape[2],arr.shape[0],arr.shape[1])), dtype = torch.float32, device=self.device))
+            arr = rearrange(arr,'h w c-> c h w')
+            tensor_list.append(torch.from_numpy(arr).float().to(self.device))
+
         return tensor_list
 
     def make_lr_hs(self):
