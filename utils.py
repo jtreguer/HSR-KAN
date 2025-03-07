@@ -20,31 +20,39 @@ from thop import clever_format
 import shutil
 
 class Metric():
-    def __init__(self,GT,preHSI) -> None:
-        self.eps = 2.2204e-16
-        assert GT.shape == preHSI.shape
-        self.GT = GT.detach().cpu().numpy()
-        self.preHSI = preHSI.detach().cpu().numpy()
-        self.PSNR,self.RMSE,self.SAM,self.ERGAS,self.SSIM = [],[],[],[],[]
-        if len(GT.shape) == 4:
-            for i in range(len(self.GT)):
-                self.PSNR.append(self.calc_psnr(self.GT[i],self.preHSI[i]))
-                self.RMSE.append(self.calc_rmse(self.GT[i],self.preHSI[i]))
-                self.SAM.append(self.calc_sam(self.GT[i],self.preHSI[i]))
-                self.ERGAS.append(self.calc_ergas(self.GT[i],self.preHSI[i]))
-                self.SSIM.append(self.calc_ssim(self.GT[i],self.preHSI[i]))
-            self.PSNR = np.array(self.PSNR).mean()
-            self.RMSE = np.array(self.RMSE).mean()
-            self.SAM = np.array(self.SAM).mean()
-            self.ERGAS = np.array(self.ERGAS).mean()
-            self.SSIM = np.array(self.SSIM).mean()
+    def __init__(self,GT = None,preHSI = None) -> None:
+      self.eps = 2.2204e-16
+      self.PSNR,self.RMSE,self.SAM,self.ERGAS,self.SSIM = [],[],[],[],[]
+      if (GT is not None) and (preHSI is not None):
+         assert GT.shape == preHSI.shape
+         self.GT = GT.detach().cpu().numpy()
+         self.preHSI = preHSI.detach().cpu().numpy()
+         # Case of lists of tensors
+         if len(GT.shape) == 4:
+               for i in range(len(self.GT)):
+                  self.PSNR.append(self.calc_psnr(self.GT[i],self.preHSI[i]))
+                  self.RMSE.append(self.calc_rmse(self.GT[i],self.preHSI[i]))
+                  self.SAM.append(self.calc_sam(self.GT[i],self.preHSI[i]))
+                  self.ERGAS.append(self.calc_ergas(self.GT[i],self.preHSI[i]))
+                  self.SSIM.append(self.calc_ssim(self.GT[i],self.preHSI[i]))
+               self.PSNR = np.array(self.PSNR).mean()
+               self.RMSE = np.array(self.RMSE).mean()
+               self.SAM = np.array(self.SAM).mean()
+               self.ERGAS = np.array(self.ERGAS).mean()
+               self.SSIM = np.array(self.SSIM).mean()
+         # Case of single tensor
+         if len(GT.shape) == 3:
+               self.PSNR = self.calc_psnr(self.GT,self.preHSI)
+               self.RMSE = self.calc_rmse(self.GT,self.preHSI)
+               self.SAM = self.calc_sam(self.GT,self.preHSI)
+               self.ERGAS = self.calc_ergas(self.GT,self.preHSI)
+               self.SSIM = self.calc_ssim(self.GT,self.preHSI)
+      else:
+         self.GT = []
+         self.preHSI = []
 
-        if len(GT.shape) == 3:
-            self.PSNR = self.calc_psnr(self.GT,self.preHSI)
-            self.RMSE = self.calc_rmse(self.GT,self.preHSI)
-            self.SAM = self.calc_sam(self.GT,self.preHSI)
-            self.ERGAS = self.calc_ergas(self.GT,self.preHSI)
-            self.SSIM = self.calc_ssim(self.GT,self.preHSI)
+    def get_metrics(self):
+        return {"PSNR": self.PSNR,"RMSE": self.RMSE, "SAM": self.SAM, "ERGAS": self.ERGAS, "SSIM": self.SSIM}
 
     @torch.no_grad()
     def calc_ergas(self, GT_image, fuse_image):

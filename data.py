@@ -48,27 +48,33 @@ class ChikuseiDataset(torch.utils.data.Dataset):
         for gt in self.GT_list:
             for k in range(len(self.wave_vector)):
                 gt[:,:,k] = cv2.normalize(gt[:,:,k],None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+        self.dataset_size = len(self.GT_list)
         # Make tensor lists
         # In c h w order for the model to digest  
         self.GT_tensor_list = self.make_cuda_tensor(self.GT_list)
         self.LRHSI_tensor_list = self.make_cuda_tensor(self.LRHSI_list)
         self.HRMSI_tensor_list = self.make_cuda_tensor(self.HRMSI_list)
+        # DEBUG
+      #   lr = self.LRHSI_tensor_list[0].cpu().detach().numpy()[3,:,:]
+      #   hr = self.HRMSI_tensor_list[0].cpu().detach().numpy()[3,:,:]
+      #   print("DEBUG")
+      #   plt.imshow(lr)
+      #   plt.show()
+      #   plt.imshow(hr)
+      #   plt.show()
 
 
     def __getitem__(self, index):
           return self.GT_tensor_list[index], self.LRHSI_tensor_list[index], self.HRMSI_tensor_list[index]
-
     
     def __len__(self):
         return len(self.GT_list)
-    
   
     def make_cuda_tensor(self, arr_list):
         tensor_list = []
         for arr in arr_list:
             arr = rearrange(arr,'h w c-> c h w')
             tensor_list.append(torch.from_numpy(arr).float().to(self.device))
-
         return tensor_list
 
     def make_lr_hs(self):
@@ -109,8 +115,8 @@ class ChikuseiDataset(torch.utils.data.Dataset):
             for j in range(j_range):
                 target_zone = self.full_image[y0+i*self.gt_size:y0+(i+1)*self.gt_size,x0+j*self.gt_size:x0+(j+1)*self.gt_size,:]
                 GT_list.append(target_zone)
-        print("First target zone")
-        plt.matshow(GT_list[0][:,:,3])       
+      #   print("First target zone")
+      #   plt.matshow(GT_list[0][:,:,3]) 
         return GT_list
     
     def gaussian_response(self, x, mean, sigma):
