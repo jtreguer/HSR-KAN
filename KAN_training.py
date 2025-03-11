@@ -46,7 +46,7 @@ torch.cuda.empty_cache()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 full_image = rearrange(hyperspectral_data,'c h w -> h w c')
-chikusei_data = ChikuseiDataset(full_image=full_image,training_zone=[128,128,1024,1024],wave_vector=w_vector,device=device,scale=4,gt_size=64)
+chikusei_data = ChikuseiDataset(full_image=full_image,training_zone=[128,128,2176,1332],wave_vector=w_vector,device=device,scale=4,gt_size=64)
 
 # Model
 HSI_bands = full_image.shape[2]
@@ -60,7 +60,7 @@ batch_size = 4
 lr = 4e-4
 loss_func = torch.nn.L1Loss()
 optimizer = torch.optim.Adam(lr=lr,params=chikusei_KAN.parameters())
-scheduler = StepLR(optimizer=optimizer,step_size=100,gamma=0.2) # Gamma set to 0.1 originally
+scheduler = StepLR(optimizer=optimizer,step_size=100,gamma=0.1) # Gamma set to 0.1 originally
 
 full_image = rearrange(hyperspectral_data,'c h w -> h w c')
 chikusei_data = ChikuseiDataset(full_image=full_image,training_zone=[128,128,1024,2048],wave_vector=w_vector,device=device,scale=4,gt_size=64)
@@ -176,7 +176,7 @@ def train(epochs: int,model: torch.nn.Module, checkpoint: str=None):
 ###############################################################
 t = time.time()
 torch.cuda.synchronize()
-b_loss, e_loss = train(100,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4.pth')
-# b_loss, e_loss = train(100,chikusei_KAN,checkpoint=None)
+# b_loss, e_loss = train(100,chikusei_KAN,checkpoint='./trained_models/KANFormer_x4/KANFormer_x4.pth')
+b_loss, e_loss = train(1200,chikusei_KAN,checkpoint=None)
 print("Training time:", time.time()-t)
 print(e_loss, len(e_loss))
